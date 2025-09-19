@@ -241,6 +241,10 @@ To modify or extend these scripts:
 
 This script follows the same MIT license as the community-scripts project.
 
+IMPORTANT: This is highly based on Proxmox VE Helper-Scripts code and is not supported by tteck's team.
+Here is the link to their website: https://community-scripts.github.io/ProxmoxVE/
+And the link to their github repo: https://github.com/community-scripts/ProxmoxVE
+
 ## Support
 
 For issues related to:
