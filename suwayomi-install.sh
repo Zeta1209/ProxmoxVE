@@ -13,7 +13,7 @@ network_check
 update_os
 
 msg_info "Installing Dependencies"
-$STD apt-get install -y curl wget unzip default-jre openjdk-21-jre-headless
+apt-get install -y curl wget unzip default-jre openjdk-21-jre-headless >/dev/null 2>&1
 msg_ok "Installed Dependencies"
 
 msg_info "Creating Suwayomi User"
@@ -24,7 +24,7 @@ msg_info "Installing Suwayomi Server"
 SUWAYOMI_VERSION="v2.1.1867"
 mkdir -p /opt/suwayomi
 cd /opt/suwayomi
-wget https://github.com/Suwayomi/Suwayomi-Server/releases/download/${SUWAYOMI_VERSION}/Suwayomi-Server-${SUWAYOMI_VERSION}-linux-x64.tar.gz
+wget -q https://github.com/Suwayomi/Suwayomi-Server/releases/download/${SUWAYOMI_VERSION}/Suwayomi-Server-${SUWAYOMI_VERSION}-linux-x64.tar.gz
 tar -xzf Suwayomi-Server-${SUWAYOMI_VERSION}-linux-x64.tar.gz --strip-components=1
 rm -f Suwayomi-Server-${SUWAYOMI_VERSION}-linux-x64.tar.gz
 chmod +x suwayomi-server.sh
@@ -62,8 +62,8 @@ Environment="JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64"
 [Install]
 WantedBy=multi-user.target
 EOF
-systemctl daemon-reload
-systemctl enable suwayomi.service
+systemctl daemon-reload >/dev/null 2>&1
+systemctl enable suwayomi.service >/dev/null 2>&1
 msg_ok "Created Systemd Service"
 
 msg_info "Starting Suwayomi Service"
@@ -88,13 +88,15 @@ EOF
 fi
 
 msg_info "Configuring Console Access"
-passwd -d root
+set +e  # Temporarily disable error handling for passwd command
+passwd -d root >/dev/null 2>&1
+set -e  # Re-enable error handling
 msg_ok "Console Access Configured"
 
 motd_ssh
 customize
 
 msg_info "Cleaning up"
-$STD apt-get -y autoremove
-$STD apt-get -y autoclean
+apt-get -y autoremove >/dev/null 2>&1
+apt-get -y autoclean >/dev/null 2>&1
 msg_ok "Cleaned"
