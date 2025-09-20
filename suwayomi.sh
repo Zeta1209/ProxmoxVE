@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
-# Copyright (c) 2025 zeta
-# Author: zeta (credit to tteckster)
-# License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
+# Copyright (c) 2021-2025 community
+# License: MIT
 # Source: https://github.com/Suwayomi/Suwayomi-Server
 
 APP="Suwayomi"
@@ -24,9 +23,193 @@ variables
 color
 catch_errors
 
+# Override build_container to handle mount points
+original_build_container() {
+  if [ "$VERBOSE" == "yes" ]; then set -x; fi
+
+  NET_STRING="-net0 name=eth0,bridge=$BRG$MAC,ip=$NET$GATE$VLAN$MTU"
+  case "$IPV6_METHOD" in
+  auto) NET_STRING="$NET_STRING,ip6=auto" ;;
+  dhcp) NET_STRING="$NET_STRING,ip6=dhcp" ;;
+  static)
+    NET_STRING="$NET_STRING,ip6=$IPV6_ADDR"
+    [ -n "$IPV6_GATE" ] && NET_STRING="$NET_STRING,gw6=$IPV6_GATE"
+    ;;
+  none) ;;
+  esac
+  if [ "$CT_TYPE" == "1" ]; then
+    FEATURES="keyctl=1,nesting=1"
+  else
+    FEATURES="nesting=1"
+  fi
+
+  if [ "$ENABLE_FUSE" == "yes" ]; then
+    FEATURES="$FEATURES,fuse=1"
+  fi
+
+  if [[ $DIAGNOSTICS == "yes" ]]; then
+    post_to_api
+  fi
+
+  TEMP_DIR=$(mktemp -d)
+  pushd "$TEMP_DIR" >/dev/null
+  if [ "$var_os" == "alpine" ]; then
+    export FUNCTIONS_FILE_PATH="$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/alpine-install.func)"
+  else
+    export FUNCTIONS_FILE_PATH="$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/install.func)"
+  fi
+
+  export DIAGNOSTICS="$DIAGNOSTICS"
+  export RANDOM_UUID="$RANDOM_UUID"
+  export CACHER="$APT_CACHER"
+  export CACHER_IP="$APT_CACHER_IP"
+  export tz="$timezone"
+  export APPLICATION="$APP"
+  export app="$NSAPP"
+  export PASSWORD="$PW"
+  export VERBOSE="$VERBOSE"
+  export SSH_ROOT="${SSH}"
+  export SSH_AUTHORIZED_KEY
+  export CTID="$CT_ID"
+  export CTTYPE="$CT_TYPE"
+  export ENABLE_FUSE="$ENABLE_FUSE"
+  export ENABLE_TUN="$ENABLE_TUN"
+  export PCT_OSTYPE="$var_os"
+  export PCT_OSVERSION="$var_version"
+  export PCT_DISK_SIZE="$DISK_SIZE"
+  export PCT_OPTIONS="
+    -features $FEATURES
+    -hostname $HN
+    -tags $TAGS
+    $SD
+    $NS
+    $NET_STRING
+    -onboot 1
+    -cores $CORE_COUNT
+    -memory $RAM_SIZE
+    -unprivileged $CT_TYPE
+    $PW
+  "
+  
+  # Add mount point to PCT_OPTIONS if enabled
+  if [ "$MOUNT_ENABLED" == "yes" ] && [ -n "$HOST_PATH" ] && [ -n "$LXC_PATH" ]; then
+    PCT_OPTIONS="$PCT_OPTIONS -mp0 $HOST_PATH,mp=$LXC_PATH"
+  fi
+  
+  # This executes create_lxc.sh and creates the container and .conf file
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/create_lxc.sh)" $?
+
+  LXC_CONFIG="/etc/pve/lxc/${CTID}.conf"
+
+  # USB passthrough for privileged LXC (CT_TYPE=0)
+  if [ "$CT_TYPE" == "0" ]; then
+    cat <<EOF >>"$LXC_CONFIG"
+# USB passthrough
+lxc.cgroup2.devices.allow: a
+lxc.cap.drop:
+lxc.cgroup2.devices.allow: c 188:* rwm
+lxc.cgroup2.devices.allow: c 189:* rwm
+lxc.mount.entry: /dev/serial/by-id  dev/serial/by-id  none bind,optional,create=dir
+lxc.mount.entry: /dev/ttyUSB0       dev/ttyUSB0       none bind,optional,create=file
+lxc.mount.entry: /dev/ttyUSB1       dev/ttyUSB1       none bind,optional,create=file
+lxc.mount.entry: /dev/ttyACM0       dev/ttyACM0       none bind,optional,create=file
+lxc.mount.entry: /dev/ttyACM1       dev/ttyACM1       none bind,optional,create=file
+EOF
+  fi
+
+  # Start the container
+  msg_info "Starting LXC Container"
+  pct start "$CTID"
+
+  # wait for status 'running'
+  for i in {1..10}; do
+    if pct status "$CTID" | grep -q "status: running"; then
+      msg_ok "Started LXC Container"
+      break
+    fi
+    sleep 1
+    if [ "$i" -eq 10 ]; then
+      msg_error "LXC Container did not reach running state"
+      exit 1
+    fi
+  done
+
+  if [ "$var_os" != "alpine" ]; then
+    msg_info "Waiting for network in LXC container"
+    for i in {1..10}; do
+      if pct exec "$CTID" -- ping -c1 -W1 deb.debian.org >/dev/null 2>&1; then
+        msg_ok "Network in LXC is reachable (ping)"
+        break
+      fi
+      if [ "$i" -lt 10 ]; then
+        msg_warn "No network in LXC yet (try $i/10) – waiting..."
+        sleep 3
+      else
+        msg_warn "Ping failed 10 times. Trying HTTP connectivity check (wget) as fallback..."
+        if pct exec "$CTID" -- wget -q --spider http://deb.debian.org; then
+          msg_ok "Network in LXC is reachable (wget fallback)"
+        else
+          msg_error "No network in LXC after all checks."
+          read -r -p "Set fallback DNS (1.1.1.1/8.8.8.8)? [y/N]: " choice
+          case "$choice" in
+          [yY]*)
+            pct set "$CTID" --nameserver 1.1.1.1
+            pct set "$CTID" --nameserver 8.8.8.8
+            if pct exec "$CTID" -- wget -q --spider http://deb.debian.org; then
+              msg_ok "Network reachable after DNS fallback"
+            else
+              msg_error "Still no network/DNS in LXC! Aborting customization."
+              exit_script
+            fi
+            ;;
+          *)
+            msg_error "Aborted by user – no DNS fallback set."
+            exit_script
+            ;;
+          esac
+        fi
+        break
+      fi
+    done
+  fi
+
+  msg_info "Customizing LXC Container"
+  : "${tz:=Etc/UTC}"
+  if [ "$var_os" == "alpine" ]; then
+    sleep 3
+    pct exec "$CTID" -- /bin/sh -c 'cat <<EOF >/etc/apk/repositories
+http://dl-cdn.alpinelinux.org/alpine/latest-stable/main
+http://dl-cdn.alpinelinux.org/alpine/latest-stable/community
+EOF'
+    pct exec "$CTID" -- ash -c "apk add bash newt curl openssh nano mc ncurses jq >/dev/null"
+  else
+    sleep 3
+    pct exec "$CTID" -- bash -c "sed -i '/$LANG/ s/^# //' /etc/locale.gen"
+    pct exec "$CTID" -- bash -c "locale_line=\$(grep -v '^#' /etc/locale.gen | grep -E '^[a-zA-Z]' | awk '{print \$1}' | head -n 1) && \
+    echo LANG=\$locale_line >/etc/default/locale && \
+    locale-gen >/dev/null && \
+    export LANG=\$locale_line"
+
+    if [[ -z "${tz:-}" ]]; then
+      tz=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "Etc/UTC")
+    fi
+    if pct exec "$CTID" -- test -e "/usr/share/zoneinfo/$tz"; then
+      pct exec "$CTID" -- bash -c "tz='$tz'; echo \"\$tz\" >/etc/timezone && ln -sf \"/usr/share/zoneinfo/\$tz\" /etc/localtime"
+    else
+      msg_warn "Skipping timezone setup – zone '$tz' not found in container"
+    fi
+
+    pct exec "$CTID" -- bash -c "apt-get update >/dev/null && apt-get install -y sudo curl mc gnupg2 jq >/dev/null"
+  fi
+  msg_ok "Customized LXC Container"
+
+  # Run the custom Suwayomi installation from your GitHub repository
+  lxc-attach -n "$CTID" -- bash -c "$(curl -fsSL https://raw.githubusercontent.com/Zeta1209/ProxmoxVE/refs/heads/main/suwayomi-install.sh)"
+}
+
 # Enhanced advanced_settings function with mount point support
 enhanced_advanced_settings() {
-  # First run the original advanced_settings function
+  # Run the original advanced_settings function first
   advanced_settings
   
   # Add mount point configuration at the end
@@ -75,54 +258,6 @@ enhanced_advanced_settings() {
   else
     MOUNT_ENABLED="no"
     echo -e "${NETWORK}${BOLD}${DGN}Mount Point: ${BGN}Disabled${CL}"
-  fi
-}
-
-# Enhanced build_container function to add mount point
-enhanced_build_container() {
-  # Call the original build_container function first
-  build_container
-
-  # Add mount point if enabled
-  if [ "$MOUNT_ENABLED" == "yes" ] && [ -n "$HOST_PATH" ] && [ -n "$LXC_PATH" ]; then
-    msg_info "Adding Mount Point"
-    LXC_CONFIG="/etc/pve/lxc/${CT_ID}.conf"
-    
-    # Find the next available mount point number
-    MOUNT_NUM=0
-    while grep -q "^mp${MOUNT_NUM}:" "$LXC_CONFIG" 2>/dev/null; do
-      MOUNT_NUM=$((MOUNT_NUM + 1))
-    done
-    
-    # Add the mount point to the LXC config
-    echo "mp${MOUNT_NUM}: ${HOST_PATH},mp=${LXC_PATH}" >> "$LXC_CONFIG"
-    
-    msg_ok "Added Mount Point: $HOST_PATH -> $LXC_PATH"
-    
-    # Stop the container to apply mount point
-    msg_info "Restarting container to apply mount point"
-    pct stop "$CT_ID"
-    sleep 2
-    pct start "$CT_ID"
-    
-    # Wait for container to be fully started
-    for i in {1..30}; do
-      if pct status "$CT_ID" | grep -q "status: running"; then
-        sleep 2
-        break
-      fi
-      sleep 1
-      if [ "$i" -eq 30 ]; then
-        msg_error "Container failed to restart properly"
-        exit 1
-      fi
-    done
-    
-    # Create the mount point directory in the container and set ownership
-    pct exec "$CT_ID" -- mkdir -p "$LXC_PATH"
-    pct exec "$CT_ID" -- chown suwayomi:suwayomi "$LXC_PATH"
-    
-    msg_ok "Mount point configured and ready"
   fi
 }
 
@@ -286,8 +421,12 @@ function update_script() {
     exit
 }
 
+function build_container() {
+  original_build_container
+}
+
 start
-enhanced_build_container
+build_container
 description
 
 msg_ok "Completed Successfully!\n"
@@ -302,3 +441,6 @@ if [ "$MOUNT_ENABLED" == "yes" ]; then
   echo -e "${TAB}${GATEWAY}${BGN}LXC Path: ${LXC_PATH}${CL}"
   echo -e "${TAB}${INFO}${YW}The mount point is active and ready to use!${CL}"
 fi
+echo -e ""
+echo -e "${INFO}${YW} Console Access:${CL}"
+echo -e "${TAB}${GATEWAY}${BGN}pct enter ${CT_ID}${CL}"
