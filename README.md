@@ -7,7 +7,7 @@ An automated installation script for deploying Suwayomi Server (manga reader ser
 Run this command on your Proxmox VE host:
 
 ```bash
-bash -c "$(wget -qLO - https://your-github-repo/suwayomi.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/Zeta1209/ProxmoxVE/refs/heads/main/suwayomi.sh)"
 ```
 
 ## 📖 About Suwayomi Server
