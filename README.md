@@ -1,142 +1,91 @@
-# Suwayomi Server Proxmox VE Helper Script
+# Suwayomi Server - Proxmox LXC Automation Script
 
-This repository contains a Proxmox VE Helper Script for automatically installing Suwayomi Server in a Debian LXC container. The script follows the same patterns and UI as the popular tteck/community-scripts helper scripts.
+An automated installation script for deploying Suwayomi Server (manga reader server) in Proxmox VE LXC containers. This script provides a streamlined setup process with configurable options for both beginners and advanced users.
 
-## What is Suwayomi Server?
+## 🚀 Quick Start
 
-Suwayomi Server is a free and open-source manga reader server that runs extensions built for Mihon (Tachiyomi). It allows you to:
+Run this command on your Proxmox VE host:
 
-- Install and execute Mihon (Tachiyomi)'s Extensions
-- Search and browse installed sources  
-- Maintain a library with categories
-- Automated library updates and downloads
-- Backup and restore support
-- Track via MyAnimeList, AniList, MangaUpdates, etc.
-- OPDS support
-
-## Features
-
-- **Interactive Installation**: Choose between default and advanced settings
-- **Automated Setup**: Complete installation and configuration of Suwayomi Server
-- **Service Management**: Systemd service for automatic startup and management
-- **Mount Support**: Optional host-to-LXC mount point configuration
-- **Headless Configuration**: Automatically configured to run without opening browser
-- **Update Support**: Built-in update functionality
-
-## Files Structure
-
-```
-├── suwayomi.sh          # Main installation script (with integrated mount point support)
-├── suwayomi-install.sh  # Installation script (called by main script)
-└── README.md           # This documentation
-```
-
-## Installation
-
-### Method 1: Direct Download and Run (Recommended for Local Testing)
-
-1. Download the script files to your Proxmox host:
-   ```bash
-   wget https://your-repo/suwayomi.sh
-   chmod +x suwayomi.sh
-   ```
-
-2. Run the script:
-   ```bash
-   bash suwayomi.sh
-   ```
-
-### Method 2: Run from URL (Future - when hosted)
-
-Once you host these scripts, users can run:
 ```bash
-bash -c "$(wget -qLO - https://your-repo/suwayomi.sh)"
+bash -c "$(wget -qLO - https://your-github-repo/suwayomi.sh)"
 ```
 
-## Script Options
+## 📖 About Suwayomi Server
 
-When you run the script, you'll be presented with several options:
+Suwayomi Server is a free, open-source manga reader server that's compatible with Tachiyomi extensions. It provides:
 
-### 1. Default Settings
-- **Container Type**: Unprivileged
-- **CPU Cores**: 2
-- **RAM**: 2048 MB
-- **Disk Size**: 8 GB
-- **OS**: Debian 12
-- **Network**: DHCP
-- **Mount Points**: None
+- **Web-based manga reading** - Access your library from any device
+- **Extension support** - Use the same extensions as Tachiyomi
+- **Library management** - Organize manga with categories and tracking
+- **Automated downloads** - Schedule updates and downloads
+- **Multi-platform** - Works on any device with a web browser
+- **Backup & sync** - Compatible with Tachiyomi backups
 
-### 2. Default Settings (Verbose)
-Same as default but with verbose output for troubleshooting.
+## 🛠️ Installation Options
 
-### 3. Advanced Settings
-Allows you to customize:
-- Container ID
-- Hostname
-- CPU cores
-- RAM allocation
-- Disk size
-- Network configuration (static IP, VLAN, etc.)
-- DNS settings
-- SSH access
-- **Mount points** (NEW!)
+### Option 1: Quick Setup (Recommended for most users)
+- Select "**Default Settings**" when prompted
+- Creates a container with sensible defaults
+- No configuration required - just run and go!
 
-### 4. Mount Points Configuration
+### Option 2: Custom Configuration  
+- Select "**Advanced Settings**" for full control
+- Customize CPU, RAM, storage, networking
+- **Configure mount points** for shared storage
+- Perfect for specific requirements
 
-When using **Advanced Settings**, you'll be asked if you want to add a mount point:
+## ⚙️ Container Specifications
 
-- **Question**: "Do you want to add a mount point from host to LXC?"
-- **Host Path**: Path on your Proxmox host (e.g., `/mnt/manga`)
-- **LXC Path**: Mount point inside the container (e.g., `/media/manga`)
+| Component | Default Value | Customizable |
+|-----------|---------------|--------------|
+| **CPU Cores** | 2 | ✅ |
+| **Memory** | 2048 MB | ✅ |
+| **Storage** | 8 GB | ✅ |
+| **OS** | Debian 12 | ❌ |
+| **Container Type** | Unprivileged | ✅ |
+| **Network** | DHCP | ✅ |
 
-**Features**:
-- Automatically creates host directory if it doesn't exist
-- Configures proper permissions inside the container
-- Automatically restarts the container to apply the mount
-- Sets ownership to the suwayomi user
+## 📁 Storage Mount Points
 
-**Note**: The mount point is configured during installation and is immediately available after setup completes.
+When using **Advanced Settings**, you can configure mount points to share storage between your Proxmox host and the Suwayomi container.
 
-## Default Configuration
+### Common Use Cases:
+- **Manga Storage**: Mount your NFS share for manga files
+- **Downloads**: Shared download directory
+- **Backups**: Automated backup storage location
 
-- **Service User**: `suwayomi`
-- **Installation Directory**: `/opt/suwayomi`
-- **Data Directory**: `/home/suwayomi/.local/share/Tachidesk`
-- **Service Name**: `suwayomi.service`
-- **Web Interface**: `http://[container-ip]:4567`
-- **Java Version**: OpenJDK 21
+### How It Works:
+1. Choose "Advanced Settings" during installation
+2. When prompted, select "Yes" for mount points
+3. Specify your host path (e.g., `/mnt/manga-library`)
+4. Choose container mount point (e.g., `/media/manga`)
+5. Script handles the rest automatically!
 
-## Post-Installation
+**Example Configuration:**
+```
+Host Path: /mnt/nas/manga
+Container Path: /media/manga
+Result: Your NAS manga collection accessible in Suwayomi
+```
 
-1. **Access the Web Interface**: 
-   Navigate to `http://[your-container-ip]:4567` in your browser
+## 🌐 Access Your Installation
 
-2. **Install Extensions**:
-   - Go to Extensions tab
-   - Browse and install manga source extensions
+After installation completes:
 
-3. **Configure Library**:
-   - Add manga to your library
-   - Set up categories
-   - Configure automatic updates
+1. **Open your web browser**
+2. **Navigate to**: `http://[container-ip]:4567`
+3. **Start reading manga!**
 
-4. **Optional - Flaresolverr Integration**:
-   If you have a Flaresolverr server running, you can configure it in Suwayomi's settings.
+The container IP will be displayed at the end of installation.
 
-5. **Mount Points** (if configured):
-   - Your mount points are immediately available
-   - Default locations: `/media/manga` and `/media/downloads`
-   - Perfect for storing manga downloads and library data
+## 🔧 Management Commands
 
-## Service Management
-
-The script creates a systemd service for easy management:
-
+### Service Control
 ```bash
 # Check status
 systemctl status suwayomi.service
 
-# Start/Stop/Restart
+# Start/stop/restart
 systemctl start suwayomi.service
 systemctl stop suwayomi.service
 systemctl restart suwayomi.service
@@ -145,119 +94,137 @@ systemctl restart suwayomi.service
 journalctl -u suwayomi.service -f
 ```
 
-## Updating Suwayomi
-
-The script includes an update function. To update Suwayomi to the latest version:
-
+### Container Management
 ```bash
-bash suwayomi.sh
+# Enter container
+pct enter [container-id]
+
+# Container status
+pct status [container-id]
+
+# Start/stop container
+pct start [container-id]
+pct stop [container-id]
 ```
 
-Then select the update option when running inside the LXC container.
+## 🔄 Updates
 
-## Troubleshooting
+To update Suwayomi to the latest version:
 
-### Container Won't Start
-- Check if the container has enough resources (2 CPU cores, 2GB RAM minimum)
-- Verify network connectivity
-- Check Proxmox logs: `pct list` and `pct status [container-id]`
+1. **Enter your container**: `pct enter [container-id]`
+2. **Run the script**: `bash suwayomi.sh`
+3. **Follow the prompts** - the script will handle downloading and installing updates
 
-### Suwayomi Won't Start
-- Check service status: `systemctl status suwayomi.service`
-- View logs: `journalctl -u suwayomi.service -f`
-- Verify Java installation: `java -version`
-- Check permissions: `ls -la /opt/suwayomi`
+## 🗂️ File Locations
 
-### Web Interface Not Accessible
-- Verify the service is running: `systemctl status suwayomi.service`
-- Check if port 4567 is being used: `netstat -tulpn | grep 4567`
-- Verify firewall settings on both host and container
-- Check the configuration file: `/home/suwayomi/.local/share/Tachidesk/server.conf`
+| Purpose | Location | Owner |
+|---------|----------|-------|
+| **Application** | `/opt/suwayomi/` | suwayomi |
+| **Configuration** | `/home/suwayomi/.local/share/Tachidesk/` | suwayomi |
+| **Service File** | `/etc/systemd/system/suwayomi.service` | root |
+| **Default Mount** | `/media/manga/` | suwayomi |
+| **Downloads** | `/media/downloads/` | suwayomi |
 
-### Mount Points Not Working
-- Mount points are configured automatically during installation
-- If you need to add mount points later, you can manually edit `/etc/pve/lxc/[container-id].conf`
-- Add line: `mp0: /host/path,mp=/container/path`
-- Restart the container: `pct restart [container-id]`
-- Set permissions: `pct exec [container-id] -- chown suwayomi:suwayomi /container/path`
+## 🎯 First Steps After Installation
 
-## Configuration Files
+### 1. Install Extensions
+- Open the web interface
+- Navigate to **Extensions** → **Browse**
+- Install extensions for your preferred manga sources
+- Enable the extensions you want to use
 
-### Main Configuration
-- **Location**: `/home/suwayomi/.local/share/Tachidesk/server.conf`
-- **Key Settings**:
-  ```
-  server.initialOpenInBrowserEnabled=false
-  server.port=4567
-  server.ip=0.0.0.0
-  ```
+### 2. Configure Library
+- Go to **Library** settings
+- Set up **Categories** for organization
+- Configure **Automatic Updates** if desired
+- Adjust **Download Settings** as needed
 
-### Service Configuration  
-- **Location**: `/etc/systemd/system/suwayomi.service`
-- **User**: `suwayomi`
-- **Working Directory**: `/opt/suwayomi`
+### 3. Optional: Flaresolverr Integration
+If you have Flaresolverr running for Cloudflare bypass:
+- Go to **Settings** → **Server**
+- Configure **Flaresolverr URL** (e.g., `http://your-flaresolverr:8191`)
 
-## Requirements
+## 🐛 Troubleshooting
 
-### Host Requirements
-- Proxmox VE 7.0+ or 8.0+
-- Available CPU cores: 2+
-- Available RAM: 2GB+
-- Available disk space: 8GB+
-- Internet connection for downloading
+### Installation Issues
+- **Verify Proxmox version**: Requires PVE 7.0+ or 8.0+
+- **Check resources**: Ensure sufficient CPU/RAM available
+- **Network connectivity**: Container needs internet access
+- **Permission errors**: Run script as root on Proxmox host
 
-### Container Requirements
-- Debian 12 (automatically configured)
-- OpenJDK 21 (automatically installed)
-- Network connectivity
+### Service Won't Start
+```bash
+# Check service logs
+journalctl -u suwayomi.service -n 50
 
-## Contributing
+# Verify Java installation
+java -version
 
-To modify or extend these scripts:
+# Check file permissions
+ls -la /opt/suwayomi/
+```
 
-1. **Main Script (`suwayomi.sh`)**:
-   - Modify default values in the `var_*` variables
-   - Update the APP name and source URL
-   - Adjust the final URL message
+### Web Interface Inaccessible
+- **Verify service is running**: `systemctl status suwayomi.service`
+- **Check port availability**: `netstat -tulpn | grep 4567`
+- **Firewall issues**: Ensure port 4567 is accessible
+- **Container networking**: Verify DHCP assignment or static IP
 
-2. **Install Script (`suwayomi-install.sh`)**:
-   - Update Suwayomi version in `SUWAYOMI_VERSION`
-   - Modify installation steps as needed
-   - Adjust configuration parameters
+### Mount Point Issues
+- **Restart container**: `pct restart [container-id]`
+- **Check configuration**: View `/etc/pve/lxc/[container-id].conf`
+- **Verify host path exists**: Ensure source directory is accessible
+- **Permission problems**: Run `pct exec [container-id] -- chown suwayomi:suwayomi /mount/path`
 
-3. **Testing**:
-   - Test on a clean Proxmox environment
-   - Verify both default and advanced installation modes
-   - Test the update functionality
+## 🔒 Security Notes
 
-## Version Information
+- Container runs as **unprivileged** by default (recommended)
+- Service runs as dedicated **suwayomi** user (not root)
+- Web interface has **no authentication** by default
+- Consider placing behind a **reverse proxy** for external access
+- Regular **updates recommended** for security patches
 
-- **Suwayomi Server Version**: v2.1.1867
-- **Supported OS**: Debian 12
-- **Java Version**: OpenJDK 21
-- **Script Version**: 1.0
+## 📋 System Requirements
 
-## License
+### Proxmox Host Requirements
+- Proxmox VE 7.0 or newer
+- Minimum 2 CPU cores available
+- At least 2 GB RAM free
+- 8+ GB storage space
+- Active internet connection
 
-This script follows the same MIT license as the community-scripts project.
+### Supported Configurations
+- ✅ **x86_64 architecture**
+- ✅ **Debian 12 LXC containers**
+- ✅ **OpenJDK 21**
+- ✅ **Systemd service management**
 
-IMPORTANT: This is highly based on Proxmox VE Helper-Scripts code and is not supported by tteck's team.
-Here is the link to their website: https://community-scripts.github.io/ProxmoxVE/
-And the link to their github repo: https://github.com/community-scripts/ProxmoxVE
+## 🤝 Contributing
 
-## Support
+Found a bug or want to improve the script?
 
-For issues related to:
-- **Script Installation**: Create an issue in this repository
-- **Suwayomi Server**: Visit the [official Suwayomi GitHub](https://github.com/Suwayomi/Suwayomi-Server)
-- **Proxmox VE**: Consult the [Proxmox documentation](https://pve.proxmox.com/pve-docs/)
+1. **Fork this repository**
+2. **Create your feature branch**
+3. **Test your changes thoroughly**
+4. **Submit a pull request**
 
-## Links
+## 📄 License
 
-- [Suwayomi Server GitHub](https://github.com/Suwayomi/Suwayomi-Server)
-- [Community Scripts GitHub](https://github.com/community-scripts/ProxmoxVE)
-- [Proxmox VE Helper Scripts](https://community-scripts.github.io/ProxmoxVE/)
+This project is licensed under MIT License - see the original community-scripts license for details.
+
+## ⚠️ Disclaimer
+
+- This script is **not officially affiliated** with Suwayomi or Proxmox
+- **Test in a non-production environment** before deploying
+- **Use at your own risk** - always backup important data
+- The script is provided **as-is** without warranty
+
+## 🔗 Related Projects
+
+- **[Suwayomi Server](https://github.com/Suwayomi/Suwayomi-Server)** - The main project
+- **[Proxmox VE](https://www.proxmox.com/en/proxmox-ve)** - Virtualization platform
+- **[Community Scripts](https://github.com/community-scripts/ProxmoxVE)** - Inspiration for this project
 
 ---
 
-**Disclaimer**: This script is not officially affiliated with Suwayomi or Proxmox. Use at your own risk and always test in a non-production environment first.
+**Happy manga reading! 📚✨**
