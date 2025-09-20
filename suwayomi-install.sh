@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2025 zeta
-# Author: zeta (credit to tteckster)
-# License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
+# Copyright (c) 2021-2025 Zeta1209
+# License: MIT
 # Source: https://github.com/Suwayomi/Suwayomi-Server
 
 source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
@@ -37,6 +36,13 @@ mkdir -p /home/suwayomi/.local/share/Tachidesk
 chown -R suwayomi:suwayomi /home/suwayomi/.local
 msg_ok "Created Configuration Directory"
 
+msg_info "Creating Default Directories"
+mkdir -p /media/manga
+mkdir -p /media/downloads
+chown suwayomi:suwayomi /media/manga
+chown suwayomi:suwayomi /media/downloads
+msg_ok "Created Default Directories"
+
 msg_info "Creating Systemd Service"
 cat <<EOF >/etc/systemd/system/suwayomi.service
 [Unit]
@@ -44,11 +50,11 @@ Description=Suwayomi Server - Manga Reader Server
 After=network.target
 
 [Service]
-Type=forking
+Type=simple
 User=suwayomi
 Group=suwayomi
 WorkingDirectory=/opt/suwayomi
-ExecStart=/opt/suwayomi/suwayomi-server.sh --headless
+ExecStart=/bin/bash /opt/suwayomi/suwayomi-server.sh --headless
 Restart=always
 RestartSec=10
 Environment="JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64"
@@ -62,18 +68,15 @@ msg_ok "Created Systemd Service"
 
 msg_info "Starting Suwayomi Service"
 systemctl start suwayomi.service
-sleep 10
+sleep 15
 msg_ok "Started Suwayomi Service"
 
 msg_info "Configuring Suwayomi"
-# Wait for the service to create the config file
-sleep 15
 if [[ -f /home/suwayomi/.local/share/Tachidesk/server.conf ]]; then
     sed -i 's/server.initialOpenInBrowserEnabled=true/server.initialOpenInBrowserEnabled=false/g' /home/suwayomi/.local/share/Tachidesk/server.conf
     systemctl restart suwayomi.service
     msg_ok "Configured Suwayomi"
 else
-    # Create the config file if it doesn't exist
     cat <<EOF >/home/suwayomi/.local/share/Tachidesk/server.conf
 server.initialOpenInBrowserEnabled=false
 server.port=4567
@@ -84,13 +87,9 @@ EOF
     msg_ok "Created and Configured Suwayomi"
 fi
 
-msg_info "Creating Default Directories"
-# Create default directories for potential use
-mkdir -p /media/manga
-mkdir -p /media/downloads
-chown suwayomi:suwayomi /media/manga
-chown suwayomi:suwayomi /media/downloads
-msg_ok "Created Default Directories"
+msg_info "Configuring Console Access"
+passwd -d root
+msg_ok "Console Access Configured"
 
 motd_ssh
 customize
