@@ -203,8 +203,8 @@ EOF'
   fi
   msg_ok "Customized LXC Container"
 
-  # Run the custom Suwayomi installation from your GitHub repository
-  lxc-attach -n "$CTID" -- bash -c "$(curl -fsSL https://raw.githubusercontent.com/Zeta1209/ProxmoxVE/refs/heads/main/suwayomi-install.sh)"
+  # Run the simplified Suwayomi installation from your GitHub repository
+  lxc-attach -n "$CTID" -- bash -c "$(curl -fsSL https://raw.githubusercontent.com/Zeta1209/ProxmoxVE/refs/heads/main/suwayomi-install-simple.sh)"
 }
 
 # Enhanced advanced_settings function with mount point support
