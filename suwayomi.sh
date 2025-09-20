@@ -205,6 +205,21 @@ EOF'
 
   # Run the simplified Suwayomi installation from your GitHub repository
   lxc-attach -n "$CTID" -- bash -c "$(curl -fsSL https://raw.githubusercontent.com/Zeta1209/ProxmoxVE/refs/heads/main/suwayomi-install-simple.sh)"
+  
+  # Force auto-login setup regardless of password setting
+  msg_info "Configuring Auto-Login"
+  pct exec "$CTID" -- bash -c '
+    GETTY_OVERRIDE="/etc/systemd/system/container-getty@1.service.d/override.conf"
+    mkdir -p $(dirname $GETTY_OVERRIDE)
+    cat <<EOF >$GETTY_OVERRIDE
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud tty%I 115200,38400,9600 \$TERM
+EOF
+    systemctl daemon-reload
+    systemctl restart $(basename $(dirname $GETTY_OVERRIDE) | sed "s/\.d//")
+  '
+  msg_ok "Auto-Login Configured"
 }
 
 # Enhanced advanced_settings function with mount point support
