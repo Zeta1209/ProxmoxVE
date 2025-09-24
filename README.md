@@ -9,6 +9,11 @@ Run this command on your Proxmox VE host:
 ```bash
 bash -c "$(wget -qLO - https://raw.githubusercontent.com/Zeta1209/ProxmoxVE/refs/heads/main/suwayomi.sh)"
 ```
+### Very quick summary
+- Do install
+- Add extension repo
+- Add manwha in library from sources
+- Download manwha and read (or just read without downloading)
 
 ## 📖 About Suwayomi Server
 
