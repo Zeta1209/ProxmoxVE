@@ -94,19 +94,6 @@ systemctl restart suwayomi.service
 journalctl -u suwayomi.service -f
 ```
 
-### Container Management
-```bash
-# Enter container
-pct enter [container-id]
-
-# Container status
-pct status [container-id]
-
-# Start/stop container
-pct start [container-id]
-pct stop [container-id]
-```
-
 ## 🔄 Updates
 
 To update Suwayomi to the latest version:
@@ -129,9 +116,12 @@ To update Suwayomi to the latest version:
 
 ### 1. Install Extensions
 - Open the web interface
-- Navigate to **Extensions** → **Browse**
-- Install extensions for your preferred manga sources
-- Enable the extensions you want to use
+- Navigate to **Settings** → **Browse**
+- Install extensions repositories to have access to the sources
+<img width="809" height="394" alt="image" src="https://github.com/user-attachments/assets/ac64303e-2dbc-48d9-a38b-adc007080043" />
+- Naviguate to **Browse** → **Extension** and add all your favorite sources
+- Then you can finally go to **Sources** still in the **Brose** section and start to add your favorite manwha's to your library
+
 
 ### 2. Configure Library
 - Go to **Library** settings
