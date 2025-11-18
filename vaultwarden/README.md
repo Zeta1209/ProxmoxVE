@@ -1,4 +1,14 @@
-# Vaultwarden Hardening Guide (Alpine / ProxmoxVE Script)
+# Vaultwarden Hardening Guide (Alpine Linux LXC)
+
+## Prerequisites
+
+This guide is for a Vaultwarden Alpine Linux LXC installation provided by the Proxmox VE Helper Scripts available at: 
+
+https://community-scripts.github.io/ProxmoxVE/scripts?id=vaultwarden
+
+**Important:** When using the installation script, make sure to choose the **Alpine Linux** option on the webpage.
+
+**Note:** If you want to set up and manage this configuration via SSH on the machine, see the [SSH Setup on Alpine Linux](#ssh-setup-on-alpine-linux) section below.
 
 ## 1. Open the Vaultwarden config file
 ```bash
@@ -42,3 +52,100 @@ rc-service vaultwarden restart
 - Only administrator-created accounts are allowed
 
 Your Vaultwarden instance is now secured and private.
+
+---
+
+## SSH Setup on Alpine Linux
+
+This section explains how to enable SSH access on your Alpine Linux container and create a user with administrative privileges.
+
+### 1. Install OpenSSH and doas
+```bash
+apk add openssh doas
+```
+
+### 2. Create a new user
+
+Replace `username` with your desired username:
+```bash
+adduser username
+```
+
+You'll be prompted to set a password and optionally fill in user information.
+
+### 3. Configure doas (sudo alternative for Alpine)
+
+Edit the doas configuration file:
+```bash
+nano /etc/doas.conf
+```
+
+Add the following line (replace `username` with your actual username):
+```bash
+permit nopass keepenv username as root
+```
+
+This configuration allows:
+- `permit` - Grants permission
+- `nopass` - No password required for elevated privileges
+- `keepenv` - Preserves environment variables
+- `username` - Your specific user
+- `as root` - Can execute commands as root
+
+### 4. Configure SSH
+
+Edit the SSH configuration file:
+```bash
+nano /etc/ssh/sshd_config
+```
+
+Recommended security settings to modify or add:
+```bash
+PermitRootLogin no
+PubkeyAuthentication yes
+PasswordAuthentication yes
+```
+
+**Note:** Once you set up SSH keys, you can disable password authentication for better security.
+
+### 5. Enable and start SSH service
+```bash
+rc-update add sshd
+rc-service sshd start
+```
+
+### 6. (Optional) Set up SSH key authentication
+
+On your local machine, generate an SSH key pair if you don't have one:
+```bash
+ssh-keygen -t ed25519 -C "your_email@example.com"
+```
+
+Then copy your public key to the Alpine server:
+```bash
+ssh-copy-id username@your-server-ip
+```
+
+After verifying key-based login works, you can disable password authentication by editing `/etc/ssh/sshd_config`:
+```bash
+PasswordAuthentication no
+```
+
+Then restart the SSH service:
+```bash
+rc-service sshd restart
+```
+
+### 7. Test your setup
+
+From your local machine:
+```bash
+ssh username@your-server-ip
+```
+
+Once logged in, test doas access:
+```bash
+doas apk update
+```
+
+You now have SSH access to your Alpine Linux container with a user that has administrative privileges via doas.
