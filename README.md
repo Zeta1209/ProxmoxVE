@@ -9,7 +9,7 @@
 
 **A comprehensive collection of automation scripts, tools, and configurations for Proxmox Virtual Environment**
 
-[Installation Scripts](#-installation-scripts) • [Tools & Utilities](#-tools--utilities) • [Documentation](#-documentation) • [Contributing](#-contributing)
+[Documentation](#-documentation) • [Contributing](#-contributing) • [Disclaimer](#-disclaimer)
 
 </div>
 
