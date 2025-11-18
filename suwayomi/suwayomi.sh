@@ -204,7 +204,7 @@ EOF'
   msg_ok "Customized LXC Container"
 
   # Run the simplified Suwayomi installation from your GitHub repository
-  lxc-attach -n "$CTID" -- bash -c "$(curl -fsSL https://raw.githubusercontent.com/Zeta1209/ProxmoxVE/refs/heads/main/suwayomi-install-simple.sh)"
+  lxc-attach -n "$CTID" -- bash -c "$(curl -fsSL https://raw.githubusercontent.com/Zeta1209/ProxmoxVE/main/suwayomi/suwayomi-install-simple.sh)"
   
   # Force auto-login setup regardless of password setting
   msg_info "Configuring Auto-Login"
