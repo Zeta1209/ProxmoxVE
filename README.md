@@ -84,6 +84,6 @@ This repository is licensed under the MIT License - see the [LICENSE](LICENSE) f
 
 **⭐ If you find this repository helpful, please consider giving it a star! ⭐**
 
-Made with ❤️ by [Zeta1209](https://github.com/Zeta1209)
+Made by [Zeta1209](https://github.com/Zeta1209)
 
 </div>
