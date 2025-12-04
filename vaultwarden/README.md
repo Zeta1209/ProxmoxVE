@@ -10,22 +10,41 @@ https://community-scripts.github.io/ProxmoxVE/scripts?id=vaultwarden
 
 **Note:** If you want to set up and manage this configuration via SSH on the machine, see the [SSH Setup on Alpine Linux](#ssh-setup-on-alpine-linux) section below.
 
-## 1. Open the Vaultwarden config file
+## 1. Generate a Secure Argon2id Admin Token
+
+Create a cryptographically secure admin token hash:
+
+```bash
+vaultwarden hash
+```
+
+When prompted, enter a strong password. Vaultwarden will output an Argon2id hash like:
+
+```
+$argon2id$v=19$m=65536,t=3,p=4$xxxx$yyyy
+```
+
+**Important:** Copy this entire hash - you'll need it in the next step.
+
+## 2. Open the Vaultwarden config file
 ```bash
 nano /etc/conf.d/vaultwarden
 ```
 
-## 2. Add or modify these lines inside the file
+## 3. Add or modify these lines inside the file
+
 ```bash
 export SIGNUPS_ALLOWED=false
-export ADMIN_TOKEN="your_secure_admin_token_here"
+export ADMIN_TOKEN='$argon2id$v=19$m=65536,t=3,p=4$xxxxxx$yyyyyy'
 export INVITATIONS_ALLOWED=false
 ```
+
+**Critical:** Use single quotes `' '` around the `ADMIN_TOKEN` to prevent shell interpretation of the `$` symbols.
 
 ### What each setting does
 
 - **`SIGNUPS_ALLOWED=false`** - Disables public account creation. Nobody can register from the login page.
-- **`ADMIN_TOKEN="your_secure_admin_token_here"`** - Enables the hidden `/admin` panel using this token. This is required so you can manually create users.
+- **`ADMIN_TOKEN='$argon2id$...'`** - Enables the hidden `/admin` panel using a secure Argon2id hashed token. You'll use your plain password (not the hash) to access the admin panel.
 - **`INVITATIONS_ALLOWED=false`** - Disables user invitations. This also removes the "Create Account" link when email isn't configured.
 
 ### Combined effect
@@ -34,20 +53,21 @@ Together, these settings lock Vaultwarden into a private mode where:
 - No one can create an account on their own
 - Only you (via the admin panel) can add new users
 - The UI no longer shows any signup options
+- Your admin token is cryptographically protected (even if someone reads the config file, they cannot derive your password)
 
-## 3. Save and exit the file
+## 4. Save and exit the file
 
 Save your changes in the editor and close it.
 
-## 4. Restart the Vaultwarden service
+## 5. Restart the Vaultwarden service
 ```bash
 rc-service vaultwarden restart
 ```
 
-## 5. Verify the changes
+## 6. Verify the changes
 
 - Public signups are disabled
-- The `/admin` page is accessible using your admin token
+- The `/admin` page is accessible using your **plain password** (not the hash)
 - The "Create Account" button is no longer visible
 - Only administrator-created accounts are allowed
 
