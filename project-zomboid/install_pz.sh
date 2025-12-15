@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-SERVER_NAME="servertest"       # change this to your server name
 CONFIG_DIR="/opt/pzserver/config"
+SERVER_NAME="servertest"  # Change this to whatever you want your server name to be
+mkdir -p "$CONFIG_DIR"
 
 echo "=== Installing Project Zomboid Server ==="
 
@@ -111,6 +112,9 @@ Mods=
 
 # Server save name (used for -servername)
 ServerName=$SERVER_NAME
+
+# Admin password to avoid interactive prompt
+AdminPassword=changeme
 EOF
 
 chown -R pzuser:pzuser "$CONFIG_DIR"
