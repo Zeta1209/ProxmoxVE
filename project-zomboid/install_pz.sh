@@ -70,7 +70,7 @@ EOF
 
 chown pzuser:pzuser /home/pzuser/update_zomboid.txt
 
-sudo -u pzuser /usr/games/steamcmd +runscript /home/pzuser/update_zomboid.txt
+su - pzuser -c "/usr/games/steamcmd +runscript /home/pzuser/update_zomboid.txt"
 
 ### -------------------------------------------------
 ### Web UI (Flask)
