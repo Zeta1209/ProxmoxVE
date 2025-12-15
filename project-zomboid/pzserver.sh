@@ -57,6 +57,9 @@ else
   echo "✅ Template already exists on $TMPL_STORAGE"
 fi
 
+read -rsp "Set root password for container: " ROOT_PASS
+echo
+
 echo "🚀 Creating LXC on storage '$ROOT_STORAGE'..."
 pct create "$CTID" "$TMPL_STORAGE:vztmpl/$TEMPLATE" \
   --hostname "$HOSTNAME" \
@@ -66,19 +69,45 @@ pct create "$CTID" "$TMPL_STORAGE:vztmpl/$TEMPLATE" \
   --net0 name=eth0,bridge=vmbr0,ip="$IP",gw="$GW" \
   --unprivileged "$UNPRIV" \
   --features nesting=1 \
-  --onboot 1
+  --onboot 1 \
+  --password "$ROOT_PASS"
 
 pct start "$CTID"
 
+echo "⏳ Waiting for network..."
+sleep 5
+
+echo "🌐 Testing network connectivity (IP)..."
+if ! pct exec "$CTID" -- ping -c 2 1.1.1.1 >/dev/null 2>&1; then
+  echo "❌ Network test failed (cannot reach 1.1.1.1)"
+  echo "➡ Check IP / Gateway configuration"
+  exit 1
+fi
+
+echo "🌐 Testing DNS resolution..."
+if ! pct exec "$CTID" -- ping -c 2 google.com >/dev/null 2>&1; then
+  echo "❌ DNS test failed (cannot resolve google.com)"
+  echo "➡ DNS may be missing or misconfigured"
+  exit 1
+fi
+
+echo "✅ Network and DNS OK"
+
 echo "📦 Installing curl inside container..."
-pct exec "$CTID" -- apt-get update
-pct exec "$CTID" -- apt-get install -y curl
+pct exec "$CTID" -- bash -c "
+  set -e
+  apt-get update
+  apt-get install -y curl ca-certificates
+"
 
 echo "📥 Fetching install files..."
-pct exec "$CTID" -- bash -c "curl -fsSL $REPO_BASE/install_pz.sh -o /root/install_pz.sh"
-pct exec "$CTID" -- bash -c "mkdir -p /opt/pz-webui"
-pct exec "$CTID" -- bash -c "curl -fsSL $REPO_BASE/app.py -o /opt/pz-webui/app.py"
-pct exec "$CTID" -- chmod +x /root/install_pz.sh
+pct exec "$CTID" -- bash -c "
+  set -e
+  mkdir -p /opt/pz-webui
+  curl -fsSL $REPO_BASE/install_pz.sh -o /root/install_pz.sh
+  curl -fsSL $REPO_BASE/app.py -o /opt/pz-webui/app.py
+  chmod +x /root/install_pz.sh
+"
 
 echo "⚙️ Running installer inside container..."
 pct exec "$CTID" -- bash /root/install_pz.sh
