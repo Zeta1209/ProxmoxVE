@@ -34,8 +34,8 @@ apt-get install -y \
   steamcmd \
   lib32gcc-s1 \
   default-jre-headless \
-  python3 python3-pip \
-  tmux ufw locales
+  python3 python3-flask \
+  tmux ufw locales ca-certificates
 
 ### -------------------------------------------------
 ### Locale
@@ -70,13 +70,17 @@ EOF
 
 chown pzuser:pzuser /home/pzuser/update_zomboid.txt
 
+echo "🔁 Initializing SteamCMD (first run)..."
+su - pzuser -c "/usr/games/steamcmd +quit"
+
+echo "⬇️ Installing Project Zomboid via SteamCMD..."
 su - pzuser -c "/usr/games/steamcmd +runscript /home/pzuser/update_zomboid.txt"
+
 
 ### -------------------------------------------------
 ### Web UI (Flask)
 ### -------------------------------------------------
 echo "🧩 Installing Web UI dependencies..."
-pip3 install --no-cache-dir flask
 
 mkdir -p /opt/pz-webui
 
