@@ -2,15 +2,15 @@
 set -e
 
 CONFIG_DIR="/opt/pzserver/config"
-SERVER_NAME="servertest"  # Change this to whatever you want your server name to be
-mkdir -p "$CONFIG_DIR"
+SERVER_NAME="servertest"
+ADMIN_USER="admin"
+ADMIN_PASS="changeme"
 
 echo "=== Installing Project Zomboid Server ==="
 
 ### -------------------------------------------------
-### Debian 13: enable contrib / non-free repos
+### Enable contrib / non-free (Debian 13)
 ### -------------------------------------------------
-echo "📦 Enabling contrib and non-free repositories (Debian 13)..."
 awk '
 /^Components:/ {
   print "Components: main contrib non-free non-free-firmware"
@@ -20,159 +20,92 @@ awk '
 ' /etc/apt/sources.list.d/debian.sources > /tmp/debian.sources
 mv /tmp/debian.sources /etc/apt/sources.list.d/debian.sources
 
-### -------------------------------------------------
-### SteamCMD prerequisites
-### -------------------------------------------------
 dpkg --add-architecture i386
 apt-get update -y
 
 echo steamcmd steam/license note '' | debconf-set-selections
 echo steamcmd steam/question select "I AGREE" | debconf-set-selections
 
-### -------------------------------------------------
-### Install packages
-### -------------------------------------------------
 apt-get install -y \
-  steamcmd \
-  lib32gcc-s1 \
+  steamcmd lib32gcc-s1 \
   default-jre-headless \
   python3 python3-flask \
-  tmux ufw locales ca-certificates
+  ufw ca-certificates locales
 
-### -------------------------------------------------
-### Locale
-### -------------------------------------------------
-echo "🌐 Setting locale..."
 echo "LANG=C.UTF-8" > /etc/default/locale
-export LANG=C.UTF-8
 
 ### -------------------------------------------------
-### Create non-root user
+### User & directories
 ### -------------------------------------------------
-echo "👤 Creating pzuser..."
 useradd -m -s /bin/bash pzuser || true
 
-### -------------------------------------------------
-### Prepare install directory
-### -------------------------------------------------
 mkdir -p /opt/pzserver
-chown -R pzuser:pzuser /opt/pzserver
+mkdir -p "$CONFIG_DIR"
+chown -R pzuser:pzuser /opt/pzserver "$CONFIG_DIR"
 
 ### -------------------------------------------------
-### Install Project Zomboid via SteamCMD
+### SteamCMD install (hardened)
 ### -------------------------------------------------
-echo "⬇️ Installing Project Zomboid via SteamCMD..."
-
-STEAM_DIR="/home/pzuser/.steam"
-PZ_DIR="/opt/pzserver"
-
-mkdir -p "$STEAM_DIR"
-chown -R pzuser:pzuser /home/pzuser
-
 su - pzuser -c "
-  export HOME=/home/pzuser
-  export STEAM_HOME=/home/pzuser/.steam
-  /usr/games/steamcmd \
-    +@sSteamCmdForcePlatformType linux \
-    +force_install_dir $PZ_DIR \
-    +login anonymous \
-    +app_update 380870 validate \
-    +quit
+export HOME=/home/pzuser
+mkdir -p ~/.steam ~/.local/share/Steam
+/usr/games/steamcmd \
+  +@sSteamCmdForcePlatformType linux \
+  +force_install_dir /opt/pzserver \
+  +login anonymous \
+  +app_update 380870 validate \
+  +quit
 "
 
-if [[ ! -x /opt/pzserver/start-server.sh ]]; then
-  echo "❌ Project Zomboid install failed: start-server.sh not found"
-  exit 1
-fi
+test -x /opt/pzserver/start-server.sh
 
 ### -------------------------------------------------
-### Create centralized server config
+### Centralized server config (EDIT THIS LATER)
 ### -------------------------------------------------
-echo "📝 Creating centralized server config in $CONFIG_DIR..."
-mkdir -p "$CONFIG_DIR"
-chown -R pzuser:pzuser "$CONFIG_DIR"
-
-# Example config file — editable after installation
 cat > "$CONFIG_DIR/server.ini" <<EOF
-# Server configuration
 PublicName=My Zomboid Server
 PublicDescription=Dedicated Server
 MaxPlayers=16
 Password=
 PauseEmpty=true
 Open=true
+
 DefaultPort=16261
 UDPPort=16262
-ResetID=1
-RCONPort=27015
-RCONPassword=changeme
 
-# Mods (comma-separated Workshop IDs or empty)
+AdminUsername=$ADMIN_USER
+AdminPassword=$ADMIN_PASS
+
 Mods=
-
-# Server save name (used for -servername)
-ServerName=$SERVER_NAME
-
-# Admin password to avoid interactive prompt
-AdminPassword=changeme
+WorkshopItems=
 EOF
 
 chown -R pzuser:pzuser "$CONFIG_DIR"
 
-# Pre-create .zomboid/Server folder to avoid interactive prompts
+### -------------------------------------------------
+### Seed Zomboid config (CRITICAL)
+### -------------------------------------------------
 su - pzuser -c "
-mkdir -p ~/.zomboid/Server
-cp $CONFIG_DIR/server.ini ~/.zomboid/Server/$SERVER_NAME.ini
+mkdir -p ~/Zomboid/Server
+cp $CONFIG_DIR/server.ini ~/Zomboid/Server/$SERVER_NAME.ini
 "
 
 ### -------------------------------------------------
-### Web UI (Flask)
+### systemd service (NON-INTERACTIVE SAFE)
 ### -------------------------------------------------
-echo "🧩 Installing Web UI dependencies..."
-mkdir -p /opt/pz-webui
-chown -R pzuser:pzuser /opt/pz-webui
-
-cat >/opt/pz-webui/.env <<EOF
-PZWEB_USER=admin
-PZWEB_PASS=changeme
-EOF
-chmod 600 /opt/pz-webui/.env
-
-### -------------------------------------------------
-### systemd services
-### -------------------------------------------------
-echo "🛠 Creating systemd services..."
-
 cat >/etc/systemd/system/zomboid.service <<EOF
 [Unit]
 Description=Project Zomboid Server
 After=network.target
 
 [Service]
-Type=simple
 User=pzuser
 WorkingDirectory=/opt/pzserver
 ExecStart=/opt/pzserver/start-server.sh -servername $SERVER_NAME
 Restart=on-failure
 RestartSec=10
-
 KillSignal=SIGINT
 TimeoutStopSec=60
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-cat >/etc/systemd/system/pz-webui.service <<EOF
-[Unit]
-Description=Project Zomboid Web UI
-After=network.target
-
-[Service]
-EnvironmentFile=/opt/pz-webui/.env
-WorkingDirectory=/opt/pz-webui
-ExecStart=/usr/bin/python3 /opt/pz-webui/app.py
-Restart=always
 
 [Install]
 WantedBy=multi-user.target
@@ -181,20 +114,13 @@ EOF
 ### -------------------------------------------------
 ### Firewall
 ### -------------------------------------------------
-echo "🔥 Configuring firewall..."
 ufw allow 16261/udp
 ufw allow 16262/udp
-ufw allow 9000/tcp
 ufw --force enable
 
-### -------------------------------------------------
-### Enable services
-### -------------------------------------------------
 systemctl daemon-reload
 systemctl enable --now zomboid
-systemctl enable --now pz-webui
 
-echo "✅ Container setup finished"
-echo "🌐 Web UI: http://<your-ip>:9000"
-echo "🔐 Web UI credentials are defined in /opt/pz-webui/.env"
-echo "📝 Edit $CONFIG_DIR/server.ini to change server settings (name, player limit, mods, etc.)"
+echo "✅ Installation complete"
+echo "📝 Edit config at: $CONFIG_DIR/server.ini"
+echo "🔄 After edits: systemctl restart zomboid"
