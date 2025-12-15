@@ -73,8 +73,22 @@ chown pzuser:pzuser /home/pzuser/update_zomboid.txt
 echo "🔁 Initializing SteamCMD (first run)..."
 su - pzuser -c "/usr/games/steamcmd +quit"
 
-echo "⬇️ Installing Project Zomboid via SteamCMD..."
-su - pzuser -c "/usr/games/steamcmd +runscript /home/pzuser/update_zomboid.txt"
+echo "⬇️ Installing Project Zomboid via SteamCMD (reliable mode)..."
+
+STEAM_DIR="/home/pzuser/.steam"
+PZ_DIR="/opt/pzserver"
+
+mkdir -p "$STEAM_DIR"
+chown -R pzuser:pzuser /home/pzuser
+
+su - pzuser -c "
+  /usr/games/steamcmd \
+    +@sSteamCmdForcePlatformType linux \
+    +force_install_dir $PZ_DIR \
+    +login anonymous \
+    +app_update 380870 validate \
+    +quit
+"
 
 
 ### -------------------------------------------------
@@ -103,12 +117,13 @@ Description=Project Zomboid Server
 After=network.target
 
 [Service]
-Type=forking
+Type=simple
 User=pzuser
 WorkingDirectory=/opt/pzserver
-ExecStart=/usr/bin/tmux new-session -d -s zomboid /opt/pzserver/start-server.sh
-ExecStop=/usr/bin/tmux kill-session -t zomboid
+ExecStart=/usr/bin/tmux new-session -As zomboid /opt/pzserver/start-server.sh
+ExecStop=/usr/bin/tmux send-keys -t zomboid C-c
 Restart=on-failure
+KillMode=none
 
 [Install]
 WantedBy=multi-user.target
