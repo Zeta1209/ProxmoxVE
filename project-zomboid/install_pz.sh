@@ -61,7 +61,7 @@ chown pzuser:pzuser /home/pzuser/steamcmd_pz.txt
 su - pzuser -c "
 export HOME=/home/pzuser
 mkdir -p ~/.steam ~/.local/share/Steam
-/usr/games/steamcmd +@sSteamCmdForcePlatformType linux +runscript steamcmd_pz.txt
+/usr/games/steamcmd +@sSteamCmdForcePlatformType linux +runscript /home/pzuser/steamcmd_pz.txt
 "
 
 ### -------------------------------------------------
