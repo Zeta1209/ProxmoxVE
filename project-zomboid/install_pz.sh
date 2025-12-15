@@ -40,8 +40,9 @@ apt-get install -y \
 ### -------------------------------------------------
 ### Locale
 ### -------------------------------------------------
-locale-gen en_US.UTF-8
-update-locale LANG=en_US.UTF-8
+echo "🌐 Setting locale..."
+echo "LANG=C.UTF-8" > /etc/default/locale
+export LANG=C.UTF-8
 
 ### -------------------------------------------------
 ### Create non-root user (MANDATORY)
