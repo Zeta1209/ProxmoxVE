@@ -61,18 +61,9 @@ chown -R pzuser:pzuser /opt/pzserver
 ### -------------------------------------------------
 echo "⬇️ Installing Project Zomboid via SteamCMD..."
 
-cat >/home/pzuser/update_zomboid.txt <<EOF
-force_install_dir /opt/pzserver
-login anonymous
-app_update 380870 validate
-quit
-EOF
-
 chown pzuser:pzuser /home/pzuser/update_zomboid.txt
 
 echo "🔁 Initializing SteamCMD (first run)..."
-su - pzuser -c "/usr/games/steamcmd +quit"
-
 echo "⬇️ Installing Project Zomboid via SteamCMD (reliable mode)..."
 
 STEAM_DIR="/home/pzuser/.steam"
@@ -82,6 +73,8 @@ mkdir -p "$STEAM_DIR"
 chown -R pzuser:pzuser /home/pzuser
 
 su - pzuser -c "
+  export HOME=/home/pzuser
+  export STEAM_HOME=/home/pzuser/.steam
   /usr/games/steamcmd \
     +@sSteamCmdForcePlatformType linux \
     +force_install_dir $PZ_DIR \
@@ -90,6 +83,10 @@ su - pzuser -c "
     +quit
 "
 
+if [[ ! -x /opt/pzserver/start-server.sh ]]; then
+  echo "❌ Project Zomboid install failed: start-server.sh not found"
+  exit 1
+fi
 
 ### -------------------------------------------------
 ### Web UI (Flask)
@@ -97,6 +94,7 @@ su - pzuser -c "
 echo "🧩 Installing Web UI dependencies..."
 
 mkdir -p /opt/pz-webui
+chown -R pzuser:pzuser /opt/pz-webui
 
 ### Web UI credentials (NOT hardcoded in service)
 cat >/opt/pz-webui/.env <<EOF
