@@ -44,20 +44,25 @@ mkdir -p "$CONFIG_DIR"
 chown -R pzuser:pzuser /opt/pzserver "$CONFIG_DIR"
 
 ### -------------------------------------------------
-### SteamCMD install (hardened)
+### SteamCMD install (scripted – REQUIRED)
 ### -------------------------------------------------
+
+cat >/home/pzuser/steamcmd_pz.txt <<EOF
+@ShutdownOnFailedCommand 1
+@NoPromptForPassword 1
+force_install_dir /opt/pzserver
+login anonymous
+app_update 380870 validate
+quit
+EOF
+
+chown pzuser:pzuser /home/pzuser/steamcmd_pz.txt
+
 su - pzuser -c "
 export HOME=/home/pzuser
 mkdir -p ~/.steam ~/.local/share/Steam
-/usr/games/steamcmd \
-  +@sSteamCmdForcePlatformType linux \
-  +force_install_dir /opt/pzserver \
-  +login anonymous \
-  +app_update 380870 validate \
-  +quit
+/usr/games/steamcmd +@sSteamCmdForcePlatformType linux +runscript steamcmd_pz.txt
 "
-
-test -x /opt/pzserver/start-server.sh
 
 ### -------------------------------------------------
 ### Centralized server config (EDIT THIS LATER)
