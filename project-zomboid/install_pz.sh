@@ -115,10 +115,14 @@ After=network.target
 Type=simple
 User=pzuser
 WorkingDirectory=/opt/pzserver
-ExecStart=/usr/bin/tmux new-session -As zomboid /opt/pzserver/start-server.sh
-ExecStop=/usr/bin/tmux send-keys -t zomboid C-c
+
+ExecStart=/opt/pzserver/start-server.sh
 Restart=on-failure
-KillMode=none
+RestartSec=10
+
+# Clean shutdown
+KillSignal=SIGINT
+TimeoutStopSec=60
 
 [Install]
 WantedBy=multi-user.target
