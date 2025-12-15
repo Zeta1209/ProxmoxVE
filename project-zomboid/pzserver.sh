@@ -70,6 +70,10 @@ pct create "$CTID" "$TMPL_STORAGE:vztmpl/$TEMPLATE" \
 
 pct start "$CTID"
 
+echo "📦 Installing curl inside container..."
+pct exec "$CTID" -- apt-get update
+pct exec "$CTID" -- apt-get install -y curl
+
 echo "📥 Fetching install files..."
 pct exec "$CTID" -- bash -c "curl -fsSL $REPO_BASE/install_pz.sh -o /root/install_pz.sh"
 pct exec "$CTID" -- bash -c "mkdir -p /opt/pz-webui"
