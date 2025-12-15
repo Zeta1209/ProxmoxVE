@@ -60,9 +60,6 @@ chown -R pzuser:pzuser /opt/pzserver
 ### Install Project Zomboid (as pzuser)
 ### -------------------------------------------------
 echo "⬇️ Installing Project Zomboid via SteamCMD..."
-
-chown pzuser:pzuser /home/pzuser/update_zomboid.txt
-
 echo "🔁 Initializing SteamCMD (first run)..."
 echo "⬇️ Installing Project Zomboid via SteamCMD (reliable mode)..."
 
