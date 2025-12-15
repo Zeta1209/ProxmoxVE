@@ -72,10 +72,15 @@ pct create "$CTID" "$TMPL_STORAGE:vztmpl/$TEMPLATE" \
   --onboot 1 \
   --password "$ROOT_PASS"
 
+echo "🔧 Setting DNS inside container..."
+pct set "$CTID" --nameserver 1.1.1.1
+
 pct start "$CTID"
 
-echo "⏳ Waiting for network..."
-sleep 5
+for i in {1..10}; do
+  pct exec "$CTID" -- ping -c1 1.1.1.1 >/dev/null 2>&1 && break
+  sleep 2
+done
 
 echo "🌐 Testing network connectivity (IP)..."
 if ! pct exec "$CTID" -- ping -c 2 1.1.1.1 >/dev/null 2>&1; then
@@ -115,4 +120,4 @@ pct exec "$CTID" -- bash /root/install_pz.sh
 echo
 echo "✅ Installation complete!"
 echo "🌐 Web UI: http://${IP%/*}:9000"
-echo "🔐 Login: admin / changeme"
+echo "🔐 Web UI credentials are defined in /opt/pz-webui/.env"
